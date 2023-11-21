@@ -47,3 +47,10 @@ func (c *Cache) Remove(key string) error {
 	delete(c.m, key)
 	return nil
 }
+
+func (c *Cache) Count() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return len(c.m)
+}
