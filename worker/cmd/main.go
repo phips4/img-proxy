@@ -57,9 +57,10 @@ func initCluster(bindIP, httpPort, secret string) {
 	http.HandleFunc("/v1/image", api.GetImage(cache, internal.Sha256UrlHasher))
 	http.HandleFunc("/v1/cache", api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg))
 	http.HandleFunc("/health", api.HandleHealth(ml))
+	http.HandleFunc("/dashboard", api.HandleDashboard(cache, ml))
 
 	go func() {
-		err := http.ListenAndServe(":"+httpPort, nil)
+		err := http.ListenAndServe("0.0.0.0:"+httpPort, nil) //TODO: config
 		if err != nil {
 			log.Println(err.Error())
 		}
