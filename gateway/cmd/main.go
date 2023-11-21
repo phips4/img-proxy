@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/api"
-	"github.com/phips4/img-proxy/gateway/internal/worker"
+	"github.com/phips4/img-proxy/gateway/internal/workerservice"
 	"log"
 	"net/http"
 	"os"
@@ -30,7 +30,7 @@ func main() {
 		log.Println("joined cluster")
 	}()
 
-	service := &worker.Service{Client: &http.Client{Timeout: time.Second * 5}}
+	service := &workerservice.Service{Client: &http.Client{Timeout: time.Second * 5}}
 
 	log.Println("server started")
 	http.HandleFunc("/image", api.HandleImage(cluster, service))

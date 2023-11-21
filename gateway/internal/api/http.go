@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
-	"github.com/phips4/img-proxy/gateway/internal/worker"
+	"github.com/phips4/img-proxy/gateway/internal/workerservice"
 	"log"
 	"math/big"
 	"net/http"
@@ -29,7 +29,7 @@ func nodeIdFromImgUrl(url string, mod int) int {
 	return int(result.Int64())
 }
 
-func HandleImage(cluster *internal.Cluster, service *worker.Service) http.HandlerFunc {
+func HandleImage(cluster *internal.Cluster, service *workerservice.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -61,7 +61,7 @@ func HandleImage(cluster *internal.Cluster, service *worker.Service) http.Handle
 		workerUrl := fmt.Sprintf("http://%s:%d", n.Addr.String(), 8080) //TODO:
 
 		raw, err := service.GetImage(workerUrl, imgUrl)
-		if errors.Is(err, worker.ErrNotFound) { // post image and update raw variable if not cached
+		if errors.Is(err, workerservice.ErrNotFound) { // post image and update raw variable if not cached
 			img, err := service.CacheImage(imgUrl)
 			if err != nil {
 				http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)

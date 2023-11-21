@@ -6,6 +6,7 @@ import (
 )
 
 func GetIp() (string, error) {
+	// thank you, AI
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
