@@ -4,12 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/worker"
 	"log"
 	"math/big"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -35,7 +37,7 @@ func HandleImage(cluster *internal.Cluster, service *worker.Service) http.Handle
 		}
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
-			http.Error(w, "url is not url escaped", http.StatusBadRequest)
+			http.Error(w, "error un-escaping url", http.StatusBadRequest)
 			return
 		}
 
@@ -44,10 +46,21 @@ func HandleImage(cluster *internal.Cluster, service *worker.Service) http.Handle
 			return
 		}
 
-		node := nodeIdFromImgUrl(imgUrl, len(cluster.Nodes()))
+		clusterLen := len(cluster.Nodes())
+		if clusterLen == 0 {
+			http.Error(w, "cluster not available", http.StatusInternalServerError)
+			return
+		}
+
+		node := nodeIdFromImgUrl(imgUrl, clusterLen)
 		log.Println("nodeId from string is", node)
 
-		raw, err := service.GetImage(imgUrl)
+		w.Header().Set("Node-Id", strconv.Itoa(node))
+
+		n := cluster.Nodes()[node]
+		workerUrl := fmt.Sprintf("http://%s:%d", n.Addr.String(), 8080) //TODO:
+
+		raw, err := service.GetImage(workerUrl, imgUrl)
 		if errors.Is(err, worker.ErrNotFound) { // post image and update raw variable if not cached
 			img, err := service.CacheImage(imgUrl)
 			if err != nil {

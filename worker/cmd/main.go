@@ -44,7 +44,7 @@ func initCluster(bindIP, httpPort, secret string) {
 
 	ml.LocalNode().Meta = []byte(`{"label":"worker"}`)
 
-	_, err = ml.Join([]string{"172.23.0.2", "172.23.0.3"}) //TODO:
+	_, err = ml.Join([]string{"172.18.0.2", "172.18.0.3"}) //TODO:
 	if err != nil {
 		log.Println("couldn't join cluster: ", err.Error())
 		return

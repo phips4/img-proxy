@@ -17,7 +17,7 @@ type (
 		GetImage(urlHash string) ([]byte, error)
 	}
 	ImageCacher interface {
-		CacheImage(url string) ([]byte, error)
+		CacheImage(workerUrl, url string) ([]byte, error)
 	}
 	Worker interface {
 		ImageGetter
@@ -32,8 +32,8 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
-func (s *Service) GetImage(imgUrl string) ([]byte, error) {
-	endpointUrl := fmt.Sprintf("http://%s:%d/v1/image?url=%s", "172.23.0.2", 8080, url.QueryEscape(imgUrl))
+func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
+	endpointUrl := fmt.Sprintf("%s/?url=%s", workerUrl, url.QueryEscape(imgUrl)) //TODO: url
 
 	resp, err := s.Client.Get(endpointUrl)
 	if err != nil {
@@ -58,7 +58,7 @@ func (s *Service) GetImage(imgUrl string) ([]byte, error) {
 }
 
 func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
-	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "172.23.0.2", 8080)
+	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "172.18.0.2", 8080) //TODO: url
 
 	requestData := map[string]interface{}{"url": imgUrl}
 	requestBody, err := json.Marshal(requestData)
