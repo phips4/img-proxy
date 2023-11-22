@@ -14,7 +14,7 @@ type AppConfig struct {
 	name          string
 }
 
-func ConfigFromEnv() (*AppConfig, error) {
+func EnvConfig() (*AppConfig, error) {
 	conf := &AppConfig{}
 
 	conf.clusterSecret = []byte(os.Getenv("CLUSTER_SECRET"))

@@ -14,8 +14,7 @@ import (
 )
 
 func main() {
-
-	conf, err := internal.ConfigFromEnv()
+	conf, err := internal.EnvConfig()
 	if err != nil {
 		log.Fatalln("error parsing env", err.Error())
 		return
