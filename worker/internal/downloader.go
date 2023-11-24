@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -18,7 +19,12 @@ func DownloadImg(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Println("couldnt close download body: " + err.Error())
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("HTTP request failed with status code: " + resp.Status)
