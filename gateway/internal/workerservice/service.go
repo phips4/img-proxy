@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -39,7 +40,12 @@ func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Println("error closing GetImage body: ", err.Error())
+		}
+	}(resp.Body)
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, ErrNotFound
