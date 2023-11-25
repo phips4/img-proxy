@@ -15,10 +15,8 @@ import (
 
 func main() {
 	secret := secretFromEnv()
-	ip, err := internal.GetIp()
-	if err != nil {
-		panic(err.Error())
-	}
+	ip := ipFromEnv()
+
 	fmt.Println("listening on:", ip)
 
 	cluster := internal.NewCluster()
@@ -30,7 +28,7 @@ func main() {
 		log.Println("joined cluster")
 	}()
 
-	service := &workerservice.Service{Client: &http.Client{Timeout: time.Second * 5}}
+	service := workerservice.NewService(time.Second * 10) //TODO: config
 
 	log.Println("server started")
 	http.HandleFunc("/image", api.HandleImage(cluster, service))
@@ -39,6 +37,14 @@ func main() {
 	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
 	log.Println("starting http server", httpSrvAddr)
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))
+}
+
+func ipFromEnv() string {
+	ip := os.Getenv("HOST")
+	if ip == "" {
+		panic("env CLUSTER_SECRET is not set")
+	}
+	return ip
 }
 
 func secretFromEnv() string {

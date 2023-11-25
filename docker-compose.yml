@@ -12,6 +12,7 @@ services:
       CLUSTER_SECRET: "6ycQElx60By2aG66YqQoAmMemebZoQgEBTsph2KkdW8="
       KNOWN_HOSTS: "img-proxy-worker-1"
       HTTP_PORT: 8080
+      HOST: "0.0.0.0"
     depends_on:
       - worker
 

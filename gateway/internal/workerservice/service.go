@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type (
@@ -24,8 +25,13 @@ type (
 		ImageGetter
 		ImageCacher
 	}
+
+	HttpClient interface {
+		Do(req *http.Request) (*http.Response, error)
+	}
+
 	Service struct {
-		Client *http.Client
+		Client HttpClient
 	}
 )
 
@@ -33,10 +39,15 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
+func NewService(timeout time.Duration) *Service {
+	return &Service{Client: &http.Client{Timeout: timeout}}
+}
+
 func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 	endpointUrl := fmt.Sprintf("%s/?url=%s", workerUrl, url.QueryEscape(imgUrl)) //TODO: url
+	req, err := http.NewRequest(http.MethodGet, endpointUrl, nil)
 
-	resp, err := s.Client.Get(endpointUrl)
+	resp, err := s.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +83,10 @@ func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
 		return nil, err
 	}
 
-	resp, err := s.Client.Post(endpointUrl, "application/json", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest(http.MethodPost, endpointUrl, bytes.NewBuffer(requestBody))
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := s.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
