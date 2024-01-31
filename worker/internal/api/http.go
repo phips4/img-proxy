@@ -44,7 +44,6 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(raw)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -90,7 +89,6 @@ func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc 
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		if _, err = w.Write(raw); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

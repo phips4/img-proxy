@@ -21,6 +21,7 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
 			http.Error(w, "error un-escaping url", http.StatusBadRequest)
@@ -57,7 +58,6 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			if _, err := w.Write(img); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
-			w.WriteHeader(http.StatusOK)
 			return
 
 		} else if err != nil {
@@ -65,7 +65,6 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write(raw); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
