@@ -31,19 +31,19 @@ func main() {
 		if _, err := net.LookupIP(hostlistFromEnv()[0]); err != nil {
 			time.Sleep(time.Second)
 		}
+
 		err := cluster.Join(ip, secret, hostlistFromEnv())
 		if err != nil {
 			log.Fatalln("error joining cluster:", err.Error())
 		}
+
 		log.Println("joined cluster")
 	}()
 
-	log.Println("server started")
 	http.HandleFunc("/image", api.HandleImage(cluster, imgService))
 	http.HandleFunc("/health", api.HandleHealth(cluster))
 
 	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
-	log.Println("starting http server", httpSrvAddr)
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))
 }
 

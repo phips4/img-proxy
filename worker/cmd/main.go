@@ -63,8 +63,6 @@ func startHttpApi(ml *memberlist.Memberlist, addr string) {
 			log.Println(err.Error())
 		}
 	}()
-
-	log.Println("worker webserver is up:", addr)
 }
 
 func get(next http.HandlerFunc) http.HandlerFunc {

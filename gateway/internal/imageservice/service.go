@@ -76,7 +76,6 @@ func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 }
 
 func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
-	log.Println("lalalalalalalalal")
 	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "img-proxy-worker-2", 8080) //TODO: url
 
 	requestBody, err := json.Marshal(map[string]interface{}{"url": imgUrl})
