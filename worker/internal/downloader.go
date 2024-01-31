@@ -19,8 +19,8 @@ func DownloadImg(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			log.Println("couldnt close download body: " + err.Error())
 		}

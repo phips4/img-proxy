@@ -1,4 +1,4 @@
-package workerservice
+package imageservice
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ func (c *mockClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func TestService_GetImage(t *testing.T) {
-	service := &Service{Client: &mockClient{}}
+	service := &Service{client: &mockClient{}}
 
 	img, err := service.GetImage("notaurl:2929", "https://notarealhost.com/image.png")
 	if err != nil {

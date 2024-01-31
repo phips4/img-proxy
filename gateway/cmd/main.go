@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/api"
-	"github.com/phips4/img-proxy/gateway/internal/workerservice"
+	"github.com/phips4/img-proxy/gateway/internal/imageservice"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,12 +16,21 @@ import (
 
 func main() {
 	secret := secretFromEnv()
-	ip := ipFromEnv()
+	ip, err := internal.GetIp()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	fmt.Println("listening on:", ip)
+	log.Println("listening on:", ip)
+	imgService := imageservice.NewService(time.Second * 10) //TODO: config
 
 	cluster := internal.NewCluster()
 	go func() {
+		// check if fist gateway instance is up, if not, wait a bit to avoid host resolution errors
+		// because all containers are started at the same time
+		if _, err := net.LookupIP(hostlistFromEnv()[0]); err != nil {
+			time.Sleep(time.Second)
+		}
 		err := cluster.Join(ip, secret, hostlistFromEnv())
 		if err != nil {
 			log.Fatalln("error joining cluster:", err.Error())
@@ -28,23 +38,13 @@ func main() {
 		log.Println("joined cluster")
 	}()
 
-	service := workerservice.NewService(time.Second * 10) //TODO: config
-
 	log.Println("server started")
-	http.HandleFunc("/image", api.HandleImage(cluster, service))
+	http.HandleFunc("/image", api.HandleImage(cluster, imgService))
 	http.HandleFunc("/health", api.HandleHealth(cluster))
 
 	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
 	log.Println("starting http server", httpSrvAddr)
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))
-}
-
-func ipFromEnv() string {
-	ip := os.Getenv("HOST")
-	if ip == "" {
-		panic("env CLUSTER_SECRET is not set")
-	}
-	return ip
 }
 
 func secretFromEnv() string {

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"log"
 	"os"
 	"strings"
 )
@@ -22,10 +23,11 @@ func EnvConfig() (*AppConfig, error) {
 		return nil, errors.New("env CLUSTER_SECRET is not set")
 	}
 
-	conf.host = os.Getenv("HOST")
-	if conf.host == "" {
-		return nil, errors.New("env HOST is not set")
+	ip, err := GetIp()
+	if err != nil {
+		log.Fatal(err)
 	}
+	conf.host = ip
 
 	conf.port = os.Getenv("PORT")
 	if conf.port == "" {

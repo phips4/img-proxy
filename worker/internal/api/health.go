@@ -20,8 +20,8 @@ func HandleHealth(memberlist *memberlist.Memberlist) http.HandlerFunc {
 		for _, member := range memberlist.Members() {
 			hostName := member.Addr.String()
 			portNum := "8080"
-			_, err := net.DialTimeout("tcp", hostName+":"+portNum, 5*time.Second)
 
+			_, err := net.DialTimeout("tcp", hostName+":"+portNum, 5*time.Second)
 			if err != nil {
 				items = append(items, onlineHosts{Ip: hostName + ":" + portNum, Status: "DOWN"})
 			} else {
@@ -29,14 +29,14 @@ func HandleHealth(memberlist *memberlist.Memberlist) http.HandlerFunc {
 			}
 		}
 
-		js, err := json.Marshal(items)
+		jsn, err := json.Marshal(items)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(js)
+		_, err = w.Write(jsn)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

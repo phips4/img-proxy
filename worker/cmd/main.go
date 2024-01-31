@@ -6,6 +6,7 @@ import (
 	"github.com/phips4/img-proxy/worker/internal"
 	"github.com/phips4/img-proxy/worker/internal/api"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,14 +31,14 @@ func main() {
 
 	startHttpApi(ml, conf.Host()+":"+conf.Port())
 
-	waitForSignal(func() {
+	onShutdown(func() {
 		if err := ml.Leave(time.Second * 5); err != nil {
 			log.Println("error shutting down worker:", err.Error())
 		}
 	})
 }
 
-func waitForSignal(closeHandler func()) {
+func onShutdown(closeHandler func()) {
 	incomingSigs := make(chan os.Signal, 1)
 	signal.Notify(incomingSigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, os.Interrupt)
 
@@ -51,10 +52,10 @@ func waitForSignal(closeHandler func()) {
 func startHttpApi(ml *memberlist.Memberlist, addr string) {
 	cache := internal.NewCache()
 
-	http.HandleFunc("/v1/image", api.GetImage(cache, internal.Sha256UrlHasher))
-	http.HandleFunc("/v1/cache", api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg))
-	http.HandleFunc("/health", api.HandleHealth(ml))
-	http.HandleFunc("/dashboard", api.HandleDashboard(cache, ml))
+	http.HandleFunc("/v1/image", get(api.GetImage(cache, internal.Sha256UrlHasher)))
+	http.HandleFunc("/v1/cache", post(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
+	http.HandleFunc("/health", get(api.HandleHealth(ml)))
+	http.HandleFunc("/dashboard", get(api.HandleDashboard(cache, ml)))
 
 	go func() {
 		err := http.ListenAndServe(addr, nil)
@@ -64,6 +65,26 @@ func startHttpApi(ml *memberlist.Memberlist, addr string) {
 	}()
 
 	log.Println("worker webserver is up:", addr)
+}
+
+func get(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func post(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		next(w, r)
+	}
 }
 
 func joinCluster(host, name string, secret []byte, knownHosts []string) (*memberlist.Memberlist, error) {
@@ -83,6 +104,12 @@ func joinCluster(host, name string, secret []byte, knownHosts []string) (*member
 	}
 
 	ml.LocalNode().Meta = []byte(`{"label":"worker"}`)
+
+	// check if fist gateway instance is up, if not, wait a bit to avoid host resolution errors
+	// because all containers are started at the same time
+	if _, err := net.LookupIP(knownHosts[0]); err != nil {
+		time.Sleep(time.Second)
+	}
 
 	_, err = ml.Join(knownHosts)
 	if err != nil {

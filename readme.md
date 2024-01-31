@@ -44,7 +44,7 @@ and running: `docker compose up`
 By default, it starts with only one gateway and worker node. To start the cluster with multiple nodes just use the awesome
 docker compose `scale` feature:
 
-For example `docker compse up --scale gateway=3 --scale worker=3`
+For example `docker compose up --scale gateway=3 --scale worker=3`
 
 Nodes are configured with environment variables, so take a look at the docker-compose.yml file.
 

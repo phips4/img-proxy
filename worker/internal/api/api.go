@@ -12,11 +12,6 @@ import (
 
 func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -32,7 +27,7 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 		raw, err := cache.Get(urlHash)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "key not found:") {
-				http.Error(w, "image not found", http.StatusNotFound)
+				http.Error(w, "image not found", http.StatusNotFound) //TODO: better error handling
 				return
 			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,11 +59,6 @@ func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc 
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read request body", http.StatusBadRequest)

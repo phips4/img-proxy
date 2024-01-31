@@ -1,4 +1,4 @@
-package workerservice
+package imageservice
 
 import (
 	"bytes"
@@ -13,8 +13,6 @@ import (
 )
 
 type (
-	// a little bit overkill
-
 	ImageGetter interface {
 		GetImage(urlHash string) ([]byte, error)
 	}
@@ -31,7 +29,7 @@ type (
 	}
 
 	Service struct {
-		Client HttpClient
+		client HttpClient
 	}
 )
 
@@ -40,19 +38,22 @@ var (
 )
 
 func NewService(timeout time.Duration) *Service {
-	return &Service{Client: &http.Client{Timeout: timeout}}
+	return &Service{client: &http.Client{Timeout: timeout}}
 }
 
 func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
-	endpointUrl := fmt.Sprintf("%s/?url=%s", workerUrl, url.QueryEscape(imgUrl)) //TODO: url
+	endpointUrl := fmt.Sprintf("%s/?url=%s", workerUrl, url.QueryEscape(imgUrl))
 	req, err := http.NewRequest(http.MethodGet, endpointUrl, nil)
-
-	resp, err := s.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func(body io.ReadCloser) {
+		err := body.Close()
 		if err != nil {
 			log.Println("error closing GetImage body: ", err.Error())
 		}
@@ -75,10 +76,10 @@ func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 }
 
 func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
-	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "172.18.0.2", 8080) //TODO: url
+	log.Println("lalalalalalalalal")
+	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "img-proxy-worker-2", 8080) //TODO: url
 
-	requestData := map[string]interface{}{"url": imgUrl}
-	requestBody, err := json.Marshal(requestData)
+	requestBody, err := json.Marshal(map[string]interface{}{"url": imgUrl})
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodPost, endpointUrl, bytes.NewBuffer(requestBody))
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := s.Client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
