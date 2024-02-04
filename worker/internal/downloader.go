@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var ErrFileNotFound = errors.New("file not found")
+
 type DownloaderFunc func(input string) ([]byte, error)
 
 func DownloadImg(url string) ([]byte, error) {
@@ -26,8 +28,11 @@ func DownloadImg(url string) ([]byte, error) {
 		}
 	}(resp.Body)
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrFileNotFound
+	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("HTTP request failed with status code: " + resp.Status)
+		return nil, errors.New("HTTP request failed with status: " + resp.Status)
 	}
 
 	imageBytes, err := io.ReadAll(resp.Body)

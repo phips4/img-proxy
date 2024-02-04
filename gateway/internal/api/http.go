@@ -33,19 +33,17 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			return
 		}
 
-		clusterLen := len(cluster.Nodes())
+		clusterLen := len(cluster.WorkerNodes())
 		if clusterLen == 0 {
 			http.Error(w, "cluster not available", http.StatusInternalServerError)
 			return
 		}
 
-		node := nodeIdFromImgUrl(imgUrl, clusterLen)
-		log.Println("nodeId from string is", node)
-
-		w.Header().Set("Node-Id", strconv.Itoa(node))
-
-		n := cluster.Nodes()[node]
-		workerUrl := fmt.Sprintf("http://%s:%d", n.Addr.String(), 8080) //TODO:
+		workerId := nodeIdFromImgUrl(imgUrl, clusterLen)
+		worker := cluster.WorkerNodes()[workerId]
+		workerUrl := fmt.Sprintf("http://%s:%d", worker.Addr.String(), 8080) //TODO: config
+		log.Println("nodeId from string is", workerId, workerUrl)
+		w.Header().Set("Node-Id", strconv.Itoa(workerId))
 
 		raw, err := service.GetImage(workerUrl, imgUrl)
 		if errors.Is(err, imageservice.ErrNotFound) { // post image and update raw variable if not cached

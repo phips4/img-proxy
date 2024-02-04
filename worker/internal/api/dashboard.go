@@ -5,19 +5,24 @@ import (
 	"github.com/phips4/img-proxy/worker/internal"
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 type dashboardData struct {
-	Ip         string
-	NodeCount  int
-	ImageCount int
+	Ip           string
+	GatewayCount int
+	WorkerCount  int
+	NodeCount    int
+	ImageCount   int
+	Meta         string
+	Name         string
 }
 
 const htmlTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Image Dashboard</title>
+	<title>Worker Dashboard</title>
 	<style>
 		body {
 			font-family: Arial, sans-serif;
@@ -42,11 +47,14 @@ const htmlTemplate = `
 </head>
 <body>
 	<div class="container">
-		<h1>Image Dashboard</h1>
+		<h1>Worker Dashboard</h1>
 		<div class="info">
+			<p>Name: {{.Name}}</p>
+			<p>Meta: {{.Meta}}</p>
 			<p>IP: {{.Ip}}</p>
-			<p>Node Count: {{.NodeCount}}</p>
-			<p>Image Count: {{.ImageCount}}</p>
+			<p>Worker Node Count: {{.WorkerCount}}</p>
+			<p>Gateway Node Count: {{.GatewayCount}}</p>
+			<p>total: {{.NodeCount}}</p>
 		</div>
 	</div>
 </body>
@@ -54,13 +62,33 @@ const htmlTemplate = `
 `
 
 // dashboardHandler is an HTTP handler function that renders the dashboard template.
-func HandleDashboard(cache *internal.Cache, memberlist *memberlist.Memberlist) http.HandlerFunc {
+func HandleDashboard(cache *internal.Cache, ml *memberlist.Memberlist) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := dashboardData{
-			Ip:         memberlist.LocalNode().Addr.String(),
-			NodeCount:  len(memberlist.Members()),
+			Ip:         ml.LocalNode().Addr.String(),
+			NodeCount:  len(ml.Members()),
 			ImageCount: cache.Count(),
+			Name:       ml.LocalNode().Name,
+			Meta:       string(ml.LocalNode().Meta),
 		}
+
+		var gateways []*memberlist.Node
+		for _, m := range ml.Members() {
+			meta := string(m.Meta)
+			if strings.Contains(meta, "gateway") {
+				gateways = append(gateways, m)
+			}
+		}
+		data.GatewayCount = len(gateways)
+
+		var workers []*memberlist.Node
+		for _, m := range ml.Members() {
+			meta := string(m.Meta)
+			if strings.Contains(meta, "worker") {
+				workers = append(workers, m)
+			}
+		}
+		data.WorkerCount = len(workers)
 
 		tmpl, err := template.New("dashboard").Parse(htmlTemplate)
 		if err != nil {

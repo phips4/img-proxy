@@ -54,7 +54,13 @@ func (c *Cluster) Join(bindIP, clusterKey string, knownIPs []string) error {
 
 func (c *Cluster) Nodes() []*memberlist.Node {
 	if c.memberlist == nil {
-		log.Println("accessing Node() when memberlist is nil")
+		return []*memberlist.Node{}
+	}
+	return c.memberlist.Members()
+}
+
+func (c *Cluster) WorkerNodes() []*memberlist.Node {
+	if c.memberlist == nil {
 		return []*memberlist.Node{}
 	}
 	return c.memberlist.Members()

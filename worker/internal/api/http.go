@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/phips4/img-proxy/worker/internal"
 	"io"
 	"log"
@@ -15,12 +16,14 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("error while un-escaping url: ", err.Error())
 			return
 		}
 
 		urlHash, err := hasherFunc(imgUrl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("error while hashing url: ", err.Error())
 			return
 		}
 
@@ -31,6 +34,7 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 				return
 			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("error while getting image: ", err.Error())
 			return
 		}
 
@@ -40,7 +44,6 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 			w.Header().Set("Content-Type", "image/png")
 		} else {
 			http.Error(w, "Unknown image type. Only jpeg and png are supported", http.StatusBadRequest)
-			log.Println("unknown content type")
 			return
 		}
 
@@ -53,7 +56,7 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 }
 
 func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc internal.DownloaderFunc) http.HandlerFunc {
-	type BodyJson struct {
+	type bodyJson struct {
 		Url string `json:"url"`
 	}
 
@@ -64,7 +67,7 @@ func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc 
 			return
 		}
 
-		var bj BodyJson
+		var bj bodyJson
 		if err := json.Unmarshal(body, &bj); err != nil {
 			http.Error(w, "Failed to unmarshal JSON data:"+err.Error(), http.StatusBadRequest)
 			return
@@ -72,13 +75,20 @@ func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc 
 
 		raw, err := dlFunc(bj.Url)
 		if err != nil {
+			if errors.Is(err, internal.ErrFileNotFound) {
+				http.NotFound(w, r)
+				return
+			}
+
 			http.Error(w, "Failed to download image "+err.Error(), http.StatusInternalServerError)
+			log.Println("error downloading image:", err.Error())
 			return
 		}
 
 		hashedUrl, err := hFunc(bj.Url)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("error hashing image:", err.Error())
 			return
 		}
 
