@@ -2,7 +2,7 @@ package internal
 
 import (
 	"encoding/base64"
-	"errors"
+	"fmt"
 	"github.com/hashicorp/memberlist"
 	"log"
 	"os"
@@ -28,17 +28,17 @@ func (c *Cluster) Join(bindIP, clusterKey string, knownIPs []string) error {
 
 	ml, err := memberlist.Create(config)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to create cluster: %w", err)
 	}
 
 	ml.LocalNode().Meta = []byte(`{"label":"gateway"}`)
 	_, err = ml.Join(knownIPs)
 	if err != nil {
-		return errors.New("Failed to join cluster: " + err.Error())
+		return fmt.Errorf("failed to join cluster: %w", err)
 	}
 
 	c.memberlist = ml
-	log.Printf("Joined the cluster")
+	log.Printf("joined the cluster")
 
 	incomingSigs := make(chan os.Signal, 1)
 	signal.Notify(incomingSigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, os.Interrupt)
@@ -46,7 +46,7 @@ func (c *Cluster) Join(bindIP, clusterKey string, knownIPs []string) error {
 	select {
 	case <-incomingSigs:
 		if err := ml.Leave(time.Second * 5); err != nil {
-			return err
+			return fmt.Errorf("error leaving cluster: %w", err)
 		}
 	}
 	return nil
