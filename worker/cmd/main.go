@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/phips4/img-proxy/worker/internal"
 	"github.com/phips4/img-proxy/worker/internal/api"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
 	"net/http"
@@ -56,6 +57,7 @@ func startHttpApi(ml *memberlist.Memberlist, addr string) {
 	http.HandleFunc("/v1/cache", post(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
 	http.HandleFunc("/health", get(api.HandleHealth(ml)))
 	http.HandleFunc("/dashboard", get(api.HandleDashboard(cache, ml)))
+	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
 		err := http.ListenAndServe(addr, nil)

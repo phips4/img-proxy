@@ -1,0 +1,54 @@
+version: "3.9"
+services:
+  gateway:
+    build:
+      dockerfile: Dockerfile
+      context: ./gateway/.
+    volumes:
+      - .:/opt/app/gateway
+    expose:
+      - "8080:8080"
+    environment:
+      CLUSTER_SECRET: "6ycQElx60By2aG66YqQoAmMemebZoQgEBTsph2KkdW8="
+      KNOWN_HOSTS: "img-proxy-worker-1"
+      HTTP_PORT: 8080
+    depends_on:
+      - worker
+
+  worker:
+    build:
+      dockerfile: Dockerfile
+      context: ./worker/.
+    volumes:
+      - .:/opt/app/worker
+    environment:
+      CLUSTER_SECRET: "6ycQElx60By2aG66YqQoAmMemebZoQgEBTsph2KkdW8="
+      PORT: "8080"
+      KNOWN_HOSTS: "img-proxy-worker-1"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus:/etc/prometheus
+      - prom_data:/prometheus
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    volumes:
+      - ./docker/grafana:/etc/grafana/provisioning/datasources
+
+volumes:
+  prom_data:

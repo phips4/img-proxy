@@ -5,6 +5,7 @@ import (
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/api"
 	"github.com/phips4/img-proxy/gateway/internal/imageservice"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
 	"net/http"
@@ -42,6 +43,7 @@ func main() {
 
 	http.HandleFunc("/image", api.HandleImage(cluster, imgService))
 	http.HandleFunc("/health", api.HandleHealth(cluster))
+	http.Handle("/metrics", promhttp.Handler())
 
 	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))

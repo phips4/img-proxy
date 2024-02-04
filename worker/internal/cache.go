@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"github.com/phips4/img-proxy/worker/internal/prom"
 	"sync"
 )
 
@@ -23,6 +24,10 @@ func (c *Cache) Set(key string, value []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m[key] = value
+
+	prom.CachedImages.Inc()
+	prom.CachedImageBytes.Add(float64(len(value)))
+
 	return nil
 }
 

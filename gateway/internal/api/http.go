@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/imageservice"
+	"github.com/phips4/img-proxy/gateway/internal/prom"
 	"log"
 	"math/big"
 	"net/http"
@@ -17,25 +18,31 @@ import (
 
 func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		prom.ImageHandlerHits.Inc()
+
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
 			http.Error(w, "error un-escaping url", http.StatusBadRequest)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		if !strings.HasPrefix(imgUrl, "https") { // url encoded for https://
 			http.Error(w, "invalid url: "+imgUrl, http.StatusBadRequest)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		clusterLen := len(cluster.WorkerNodes())
 		if clusterLen == 0 {
 			http.Error(w, "cluster not available", http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
@@ -50,21 +57,25 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			img, err := service.CacheImage(imgUrl)
 			if err != nil {
 				http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
+				prom.ImageHandlerErrors.Inc()
 				return
 			}
 
 			if _, err := w.Write(img); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				prom.ImageHandlerErrors.Inc()
 			}
 			return
 
 		} else if err != nil {
 			http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		if _, err := w.Write(raw); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 	}
