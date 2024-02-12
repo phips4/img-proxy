@@ -21,11 +21,6 @@ type (
 		CacheImage(workerUrl, url string) ([]byte, error)
 	}
 
-	Worker interface {
-		ImageGetter
-		ImageCacher
-	}
-
 	HttpClient interface {
 		Do(req *http.Request) (*http.Response, error)
 	}

@@ -14,7 +14,7 @@ type DownloaderFunc func(input string) ([]byte, error)
 
 func DownloadImg(url string) ([]byte, error) {
 	client := &http.Client{
-		Timeout: time.Second * 3,
+		Timeout: time.Second * 10,
 	}
 
 	resp, err := client.Get(url)

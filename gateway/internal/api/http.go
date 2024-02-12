@@ -12,19 +12,12 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
-func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.HandlerFunc {
+func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		prom.ImageHandlerHits.Inc()
-
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			prom.ImageHandlerErrors.Inc()
-			return
-		}
 
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
@@ -48,9 +41,9 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 
 		workerId := idFromUrl(imgUrl, clusterLen)
 		worker := cluster.WorkerNodes()[workerId]
-		workerUrl := fmt.Sprintf("http://%s:%d", worker.Addr.String(), 8080) //TODO: config
+		workerUrl := fmt.Sprintf("http://%s:%d", worker.Addr.String(), 8080)
+
 		log.Println("nodeId from string is", workerId, workerUrl)
-		w.Header().Set("Node-Id", strconv.Itoa(workerId))
 
 		raw, err := service.GetImage(workerUrl, imgUrl)
 		if errors.Is(err, imageservice.ErrNotFound) { // post image and update raw variable if not cached
@@ -96,18 +89,19 @@ func idFromUrl(url string, mod int) int {
 	return int(result.Int64())
 }
 
-func HandleHealth(cluster *internal.Cluster) http.HandlerFunc {
+type response struct {
+	Nodes []string `json:"nodes"`
+	Score int      `json:"score"`
+}
+
+func HandleHealth(cluster internal.Cluster) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var nodes []string
 		for _, node := range cluster.Nodes() {
 			nodes = append(nodes, node.Addr.String())
 		}
 
-		type Response struct {
-			Nodes []string `json:"nodes"`
-			Score int      `json:"score"`
-		}
-		resp := &Response{
+		resp := &response{
 			Nodes: nodes,
 			Score: cluster.HealthScore(),
 		}

@@ -16,19 +16,19 @@ import (
 )
 
 func main() {
-	secret := secretFromEnv()
-	ip, err := internal.GetIp()
-	if err != nil {
-		log.Fatal(err)
-	}
+	addrs, err := net.InterfaceAddrs()
+	must(err)
 
-	log.Println("listening on:", ip)
+	ip, err := internal.FindIp(addrs)
+	must(err)
+
 	imgService := imageservice.NewService(time.Second * 10) //TODO: config
-
 	cluster := internal.NewCluster()
+
+	secret := secretFromEnv()
 	go func() {
 		// check if fist gateway instance is up, if not, wait a bit to avoid host resolution errors
-		// because all containers are started at the same time
+		// because all containers can be started at the same time
 		if _, err := net.LookupIP(hostlistFromEnv()[0]); err != nil {
 			time.Sleep(time.Second)
 		}
@@ -37,7 +37,6 @@ func main() {
 		if err != nil {
 			log.Fatalln("error joining cluster:", err.Error())
 		}
-
 		log.Println("joined cluster")
 	}()
 
@@ -46,7 +45,14 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
+	log.Println("listening on:", httpSrvAddr)
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))
+}
+
+func must(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func secretFromEnv() string {

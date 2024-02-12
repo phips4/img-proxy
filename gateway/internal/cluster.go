@@ -12,16 +12,22 @@ import (
 	"time"
 )
 
-type Cluster struct {
-	id         int
+type Cluster interface {
+	Join(bindIP, clusterKey string, knownIPs []string) error
+	Nodes() []*memberlist.Node
+	WorkerNodes() []*memberlist.Node
+	HealthScore() int
+}
+
+type ClusterImpl struct {
 	memberlist *memberlist.Memberlist
 }
 
-func NewCluster() *Cluster {
-	return &Cluster{}
+func NewCluster() *ClusterImpl {
+	return &ClusterImpl{}
 }
 
-func (c *Cluster) Join(bindIP, clusterKey string, knownIPs []string) error {
+func (c *ClusterImpl) Join(bindIP, clusterKey string, knownIPs []string) error {
 	config := memberlist.DefaultWANConfig()
 	config.BindAddr = bindIP
 	config.SecretKey, _ = base64.StdEncoding.DecodeString(clusterKey)
@@ -53,14 +59,14 @@ func (c *Cluster) Join(bindIP, clusterKey string, knownIPs []string) error {
 	return nil
 }
 
-func (c *Cluster) Nodes() []*memberlist.Node {
+func (c *ClusterImpl) Nodes() []*memberlist.Node {
 	if c.memberlist == nil {
 		return []*memberlist.Node{}
 	}
 	return c.memberlist.Members()
 }
 
-func (c *Cluster) WorkerNodes() []*memberlist.Node {
+func (c *ClusterImpl) WorkerNodes() []*memberlist.Node {
 	if c.memberlist == nil {
 		return []*memberlist.Node{}
 	}
@@ -75,6 +81,6 @@ func (c *Cluster) WorkerNodes() []*memberlist.Node {
 	return workers
 }
 
-func (c *Cluster) HealthScore() int {
+func (c *ClusterImpl) HealthScore() int {
 	return c.memberlist.GetHealthScore()
 }

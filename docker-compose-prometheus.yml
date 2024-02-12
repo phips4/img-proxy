@@ -2,8 +2,8 @@ version: "3.9"
 services:
   gateway:
     build:
-      dockerfile: Dockerfile
-      context: ./gateway/.
+      dockerfile: gateway/Dockerfile
+      context: gateway
     volumes:
       - .:/opt/app/gateway
     expose:
@@ -17,8 +17,8 @@ services:
 
   worker:
     build:
-      dockerfile: Dockerfile
-      context: ./worker/.
+      dockerfile: worker/Dockerfile
+      context: worker
     volumes:
       - .:/opt/app/worker
     environment:
@@ -32,7 +32,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     ports:
-      - 9090:9090
+      - "9090:9090"
     restart: unless-stopped
     volumes:
       - ./docker/prometheus:/etc/prometheus
@@ -42,7 +42,7 @@ services:
     image: grafana/grafana
     container_name: grafana
     ports:
-      - 3000:3000
+      - "3000:3000"
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=admin
