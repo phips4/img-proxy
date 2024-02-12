@@ -46,7 +46,7 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			return
 		}
 
-		workerId := nodeIdFromImgUrl(imgUrl, clusterLen)
+		workerId := idFromUrl(imgUrl, clusterLen)
 		worker := cluster.WorkerNodes()[workerId]
 		workerUrl := fmt.Sprintf("http://%s:%d", worker.Addr.String(), 8080) //TODO: config
 		log.Println("nodeId from string is", workerId, workerUrl)
@@ -54,7 +54,7 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 
 		raw, err := service.GetImage(workerUrl, imgUrl)
 		if errors.Is(err, imageservice.ErrNotFound) { // post image and update raw variable if not cached
-			img, err := service.CacheImage(imgUrl)
+			img, err := service.CacheImage(workerUrl, imgUrl)
 			if err != nil {
 				http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
 				prom.ImageHandlerErrors.Inc()
@@ -64,8 +64,8 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 			if _, err := w.Write(img); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				prom.ImageHandlerErrors.Inc()
+				return
 			}
-			return
 
 		} else if err != nil {
 			http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func HandleImage(cluster *internal.Cluster, service *imageservice.Service) http.
 }
 
 // keep it simple for now
-func nodeIdFromImgUrl(url string, mod int) int {
+func idFromUrl(url string, mod int) int {
 	hasher := sha256.New()
 	hasher.Write([]byte(url))
 	hashBytes := hasher.Sum(nil)

@@ -16,9 +16,11 @@ type (
 	ImageGetter interface {
 		GetImage(urlHash string) ([]byte, error)
 	}
+
 	ImageCacher interface {
 		CacheImage(workerUrl, url string) ([]byte, error)
 	}
+
 	Worker interface {
 		ImageGetter
 		ImageCacher
@@ -43,6 +45,7 @@ func NewService(timeout time.Duration) *Service {
 
 func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 	endpointUrl := fmt.Sprintf("%s/?url=%s", workerUrl, url.QueryEscape(imgUrl))
+	log.Println("downloading from ", workerUrl)
 	req, err := http.NewRequest(http.MethodGet, endpointUrl, nil)
 	if err != nil {
 		return nil, err
@@ -75,8 +78,8 @@ func (s *Service) GetImage(workerUrl, imgUrl string) ([]byte, error) {
 	return raw, nil
 }
 
-func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
-	endpointUrl := fmt.Sprintf("http://%s:%d/v1/cache", "img-proxy-worker-2", 8080) //TODO: url
+func (s *Service) CacheImage(workerUrl, imgUrl string) ([]byte, error) {
+	endpointUrl := fmt.Sprintf("%s/v1/cache", workerUrl) //TODO: url
 
 	requestBody, err := json.Marshal(map[string]interface{}{"url": imgUrl})
 	if err != nil {
@@ -84,6 +87,9 @@ func (s *Service) CacheImage(imgUrl string) ([]byte, error) {
 	}
 
 	req, err := http.NewRequest(http.MethodPost, endpointUrl, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)

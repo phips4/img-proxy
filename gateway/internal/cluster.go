@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -63,7 +64,15 @@ func (c *Cluster) WorkerNodes() []*memberlist.Node {
 	if c.memberlist == nil {
 		return []*memberlist.Node{}
 	}
-	return c.memberlist.Members()
+
+	var workers []*memberlist.Node
+	for _, n := range c.memberlist.Members() {
+		if strings.Contains(string(n.Meta), "worker") {
+			workers = append(workers, n)
+		}
+	}
+
+	return workers
 }
 
 func (c *Cluster) HealthScore() int {
