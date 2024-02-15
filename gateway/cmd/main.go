@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/phips4/img-proxy/gateway/internal"
 	"github.com/phips4/img-proxy/gateway/internal/api"
 	"github.com/phips4/img-proxy/gateway/internal/imageservice"
@@ -10,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -24,7 +22,6 @@ func main() {
 
 	imgService := imageservice.NewService(time.Second * 10) //TODO: config
 	cluster := internal.NewCluster()
-
 	secret := secretFromEnv()
 	go func() {
 		// check if fist gateway instance is up, if not, wait a bit to avoid host resolution errors
@@ -44,7 +41,7 @@ func main() {
 	http.HandleFunc("/health", api.HandleHealth(cluster))
 	http.Handle("/metrics", promhttp.Handler())
 
-	httpSrvAddr := fmt.Sprintf(":%d", httpPortFromEnv())
+	httpSrvAddr := net.JoinHostPort("", httpPortFromEnv()) //TODO: use host from config
 	log.Println("listening on:", httpSrvAddr)
 	log.Fatalln(http.ListenAndServe(httpSrvAddr, nil))
 }
@@ -71,9 +68,9 @@ func hostlistFromEnv() []string {
 	return strings.Split(hosts, ",")
 }
 
-func httpPortFromEnv() int {
-	port, err := strconv.Atoi(os.Getenv("HTTP_PORT"))
-	if err != nil {
+func httpPortFromEnv() string {
+	port := os.Getenv("HTTP_PORT")
+	if port == "" {
 		panic("env HTTP_PORT is not set")
 	}
 	return port

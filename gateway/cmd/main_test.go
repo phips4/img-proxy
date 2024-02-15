@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -17,8 +16,8 @@ func Test_hostlistFromEnv(t *testing.T) {
 }
 
 func Test_httpPortFromEnv(t *testing.T) {
-	const expected = 9090
-	t.Setenv("HTTP_PORT", strconv.Itoa(expected))
+	const expected = "9090"
+	t.Setenv("HTTP_PORT", expected)
 	got := httpPortFromEnv()
 
 	if got != expected {
