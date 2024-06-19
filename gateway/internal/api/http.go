@@ -21,8 +21,7 @@ func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.H
 
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
-			http.Error(w, "error un-escaping url", http.StatusBadRequest)
-			prom.ImageHandlerErrors.Inc()
+			imageError(w, "HandleImage QueryUnescape error:", err)
 			return
 		}
 
@@ -34,8 +33,7 @@ func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.H
 
 		clusterLen := len(cluster.WorkerNodes())
 		if clusterLen == 0 {
-			http.Error(w, "cluster not available", http.StatusInternalServerError)
-			prom.ImageHandlerErrors.Inc()
+			imageError(w, "HandleImage cluster not available:", err)
 			return
 		}
 
@@ -49,29 +47,31 @@ func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.H
 		if errors.Is(err, imageservice.ErrNotFound) { // post image and update raw variable if not cached
 			img, err := service.CacheImage(workerUrl, imgUrl)
 			if err != nil {
-				http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
-				prom.ImageHandlerErrors.Inc()
+				imageError(w, "client responded with error", err)
 				return
 			}
 
 			if _, err := w.Write(img); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				prom.ImageHandlerErrors.Inc()
+				imageError(w, "HandleImage error writing response", err)
 				return
 			}
 
 		} else if err != nil {
-			http.Error(w, "client responded with: "+err.Error(), http.StatusInternalServerError)
-			prom.ImageHandlerErrors.Inc()
+			imageError(w, "client responded with error", err)
 			return
 		}
 
 		if _, err := w.Write(raw); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			prom.ImageHandlerErrors.Inc()
+			imageError(w, "HandleImage error writing response", err)
 			return
 		}
 	}
+}
+
+func imageError(w http.ResponseWriter, msg string, err error) {
+	log.Println(msg, err)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
+	prom.ImageHandlerErrors.Inc()
 }
 
 // keep it simple for now
@@ -108,14 +108,20 @@ func HandleHealth(cluster internal.Cluster) http.HandlerFunc {
 
 		jsn, err := json.Marshal(resp)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			healthError(w, "HealthHandler error marshalling json:", err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if _, err := w.Write(jsn); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			healthError(w, "HealthHandler error writing response:", err)
 			return
 		}
 	}
+}
+
+func healthError(w http.ResponseWriter, msg string, err error) {
+	log.Println(msg, err)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
+	prom.HealthHandlerErrors.Inc()
 }

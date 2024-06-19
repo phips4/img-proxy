@@ -14,4 +14,8 @@ var (
 		Name: "imgproxy_image_handler_errors_total",
 		Help: "The total number of errors which occurred in the image handler",
 	})
+	HealthHandlerErrors = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "imgproxy_health_handler_errors_total",
+		Help: "The total number of errors which occurred in the handler",
+	})
 )
