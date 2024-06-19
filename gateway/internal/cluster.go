@@ -13,7 +13,7 @@ import (
 )
 
 type Cluster interface {
-	Join(bindIP, clusterKey string, knownIPs []string) error
+	Join(bindIP string, clusterKey []byte, knownIPs []string) error
 	Nodes() []*memberlist.Node
 	WorkerNodes() []*memberlist.Node
 	HealthScore() int
@@ -27,10 +27,10 @@ func NewCluster() *ClusterImpl {
 	return &ClusterImpl{}
 }
 
-func (c *ClusterImpl) Join(bindIP, clusterKey string, knownIPs []string) error {
+func (c *ClusterImpl) Join(bindIP string, clusterKey []byte, knownIPs []string) error {
 	config := memberlist.DefaultWANConfig()
 	config.BindAddr = bindIP
-	config.SecretKey, _ = base64.StdEncoding.DecodeString(clusterKey)
+	config.SecretKey, _ = base64.StdEncoding.DecodeString(string(clusterKey))
 	config.Name = bindIP
 
 	ml, err := memberlist.Create(config)
