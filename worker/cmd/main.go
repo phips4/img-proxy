@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/phips4/img-proxy/worker/internal"
 	"github.com/phips4/img-proxy/worker/internal/api"
+	"github.com/phips4/img-proxy/worker/internal/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net"
@@ -30,7 +31,20 @@ func main() {
 		return
 	}
 
-	startHttpApi(ml, conf.Host()+":"+conf.Port())
+	cache := internal.NewCache()
+
+	http.HandleFunc("/v1/image", middleware.OnlyGet(api.GetImage(cache, internal.Sha256UrlHasher)))
+	http.HandleFunc("/v1/cache", middleware.OnlyPost(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
+	http.HandleFunc("/health", middleware.OnlyGet(api.HandleHealth(ml)))
+	http.HandleFunc("/dashboard", middleware.OnlyGet(api.HandleDashboard(cache, ml)))
+	http.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		err := http.ListenAndServe(conf.Host()+":"+conf.Port(), nil)
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}()
 
 	onShutdown(func() {
 		if err := ml.Leave(time.Second * 5); err != nil {
@@ -47,43 +61,6 @@ func onShutdown(closeHandler func()) {
 	case <-incomingSigs:
 		log.Println("shutting down worker")
 		closeHandler()
-	}
-}
-
-func startHttpApi(ml *memberlist.Memberlist, addr string) {
-	cache := internal.NewCache()
-
-	http.HandleFunc("/v1/image", get(api.GetImage(cache, internal.Sha256UrlHasher)))
-	http.HandleFunc("/v1/cache", post(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
-	http.HandleFunc("/health", get(api.HandleHealth(ml)))
-	http.HandleFunc("/dashboard", get(api.HandleDashboard(cache, ml)))
-	http.Handle("/metrics", promhttp.Handler())
-
-	go func() {
-		err := http.ListenAndServe(addr, nil)
-		if err != nil {
-			log.Println(err.Error())
-		}
-	}()
-}
-
-func get(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		next(w, r)
-	}
-}
-
-func post(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		next(w, r)
 	}
 }
 
