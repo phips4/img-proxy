@@ -62,8 +62,8 @@ const htmlTemplate = `
 </html>
 `
 
-// HandleDashboard is an HTTP handler function that renders the dashboard template.
-func HandleDashboard(cache *internal.Cache, ml *memberlist.Memberlist) http.HandlerFunc {
+// DashboardHandler is an HTTP handler function that renders the dashboard template
+func DashboardHandler(cache *internal.Cache, ml *memberlist.Memberlist) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := dashboardData{
 			Ip:         ml.LocalNode().Addr.String(),

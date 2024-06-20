@@ -37,8 +37,8 @@ func main() {
 		log.Println("joined cluster")
 	}()
 
-	http.HandleFunc("/image", api.HandleImage(cluster, imgService))
-	http.HandleFunc("/health", api.HandleHealth(cluster))
+	http.HandleFunc("/image", api.ImageHandler(cluster, imgService))
+	http.HandleFunc("/health", api.HealthHandler(cluster))
 	http.Handle("/metrics", promhttp.Handler())
 
 	httpSrvAddr := net.JoinHostPort("", conf.HttpPort()) //TODO: use host from config

@@ -13,7 +13,8 @@ import (
 
 const internalErrorStr = "internal server error"
 
-func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.HandlerFunc {
+// ImageHandler gets an image from the local cache
+func ImageHandler(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
@@ -60,7 +61,8 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 	}
 }
 
-func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc internal.DownloaderFunc) http.HandlerFunc {
+// ImageCacheHandler handles uploading images to the local cache
+func ImageCacheHandler(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc internal.DownloaderFunc) http.HandlerFunc {
 	type bodyJson struct {
 		Url string `json:"url"`
 	}

@@ -33,10 +33,10 @@ func main() {
 
 	cache := internal.NewCache()
 
-	http.HandleFunc("/v1/image", middleware.OnlyGet(api.GetImage(cache, internal.Sha256UrlHasher)))
-	http.HandleFunc("/v1/cache", middleware.OnlyPost(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
-	http.HandleFunc("/health", middleware.OnlyGet(api.HandleHealth(ml)))
-	http.HandleFunc("/dashboard", middleware.OnlyGet(api.HandleDashboard(cache, ml)))
+	http.HandleFunc("/v1/image", middleware.OnlyGet(api.ImageHandler(cache, internal.Sha256UrlHasher)))
+	http.HandleFunc("/v1/cache", middleware.OnlyPost(api.ImageCacheHandler(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
+	http.HandleFunc("/health", middleware.OnlyGet(api.HealthHandler(ml)))
+	http.HandleFunc("/dashboard", middleware.OnlyGet(api.DashboardHandler(cache, ml)))
 	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
