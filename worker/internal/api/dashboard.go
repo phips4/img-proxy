@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/phips4/img-proxy/worker/internal"
 	"html/template"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -61,7 +62,7 @@ const htmlTemplate = `
 </html>
 `
 
-// dashboardHandler is an HTTP handler function that renders the dashboard template.
+// HandleDashboard is an HTTP handler function that renders the dashboard template.
 func HandleDashboard(cache *internal.Cache, ml *memberlist.Memberlist) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data := dashboardData{
@@ -79,9 +80,10 @@ func HandleDashboard(cache *internal.Cache, ml *memberlist.Memberlist) http.Hand
 				gateways = append(gateways, m)
 			}
 		}
-		data.GatewayCount = len(gateways)
 
+		data.GatewayCount = len(gateways)
 		var workers []*memberlist.Node
+
 		for _, m := range ml.Members() {
 			meta := string(m.Meta)
 			if strings.Contains(meta, "worker") {
@@ -92,13 +94,15 @@ func HandleDashboard(cache *internal.Cache, ml *memberlist.Memberlist) http.Hand
 
 		tmpl, err := template.New("dashboard").Parse(htmlTemplate)
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Println("DashboardHandler (worker) error parsing template:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		err = tmpl.Execute(w, data)
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Println("DashboardHandler (worker) error executing template:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 	}

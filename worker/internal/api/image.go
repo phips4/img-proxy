@@ -11,30 +11,33 @@ import (
 	"strings"
 )
 
+const internalErrorStr = "internal server error"
+
 func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Println("error while un-escaping url: ", err.Error())
+			log.Println("ImageHandler (worker) error while un-escaping url:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		urlHash, err := hasherFunc(imgUrl)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Println("error while hashing url: ", err.Error())
+			log.Println("ImageHandler (worker) error while hashing url:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		raw, err := cache.Get(urlHash)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "key not found:") {
-				http.Error(w, "image not found", http.StatusNotFound) //TODO: better error handling
+				log.Println("ImageHandler (worker) cache miss")
+				http.Error(w, "image not found", http.StatusNotFound)
 				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Println("error while getting image: ", err.Error())
+			log.Println("ImageHandler (worker) error while getting image:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
@@ -43,13 +46,15 @@ func GetImage(cache *internal.Cache, hasherFunc internal.UrlHasherFunc) http.Han
 		} else if isPng(raw) {
 			w.Header().Set("Content-Type", "image/png")
 		} else {
+			log.Println("ImageHandler (worker) unknown image type")
 			http.Error(w, "Unknown image type. Only jpeg and png are supported", http.StatusBadRequest)
 			return
 		}
 
 		_, err = w.Write(raw)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("ImageHandler (worker) error while writing response:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -63,44 +68,49 @@ func PostCacheImage(cache *internal.Cache, hFunc internal.UrlHasherFunc, dlFunc 
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			log.Println("ImageHandler (worker) error while reading body:", err)
 			http.Error(w, "Failed to read request body", http.StatusBadRequest)
 			return
 		}
 
 		var bj bodyJson
 		if err := json.Unmarshal(body, &bj); err != nil {
-			http.Error(w, "Failed to unmarshal JSON data:"+err.Error(), http.StatusBadRequest)
+			log.Println("ImageHandler (worker) error while parsing body:", err)
+			http.Error(w, internalErrorStr, http.StatusBadRequest)
 			return
 		}
 
 		raw, err := dlFunc(bj.Url)
 		if err != nil {
 			if errors.Is(err, internal.ErrFileNotFound) {
+				log.Println("ImageHandler (worker) file not found")
 				http.NotFound(w, r)
 				return
 			}
 
-			http.Error(w, "Failed to download image "+err.Error(), http.StatusInternalServerError)
-			log.Println("error downloading image:", err.Error())
+			log.Println("ImageHandler (worker) error while downloading image:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		hashedUrl, err := hFunc(bj.Url)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			log.Println("error hashing image:", err.Error())
+			log.Println("ImageHandler (worker) error while hashing image:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		//TODO: do resizing, compression etc here
 
 		if err = cache.Set(hashedUrl, raw); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("ImageHandler (worker) error while writing response:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 
 		if _, err = w.Write(raw); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("ImageHandler (worker) error while writing response:", err)
+			http.Error(w, internalErrorStr, http.StatusInternalServerError)
 			return
 		}
 	}
