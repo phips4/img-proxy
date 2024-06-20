@@ -17,15 +17,15 @@ import (
 )
 
 func main() {
-	conf, err := internal.EnvConfig()
+	conf, err := internal.ConfigFromEnv()
 	if err != nil {
 		log.Fatalln("error parsing env", err.Error())
 		return
 	}
 
-	log.Printf("starting worker URL: %s:%s/ \n", conf.Host(), conf.Port())
+	log.Printf("starting worker URL: %s:%s/ \n", conf.Host(), conf.HttpPort())
 
-	ml, err := joinCluster(conf.Host(), conf.Name(), conf.ClusterSecret(), conf.KnownHosts())
+	ml, err := joinCluster(conf.Host(), conf.Name(), conf.Secret(), conf.KnownHosts())
 	if err != nil {
 		log.Fatalln("could not join cluster: ", err.Error())
 		return
@@ -33,14 +33,14 @@ func main() {
 
 	cache := internal.NewCache()
 
-	http.HandleFunc("/v1/image", middleware.OnlyGet(api.GetImage(cache, internal.Sha256UrlHasher)))
-	http.HandleFunc("/v1/cache", middleware.OnlyPost(api.PostCacheImage(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
-	http.HandleFunc("/health", middleware.OnlyGet(api.HandleHealth(ml)))
-	http.HandleFunc("/dashboard", middleware.OnlyGet(api.HandleDashboard(cache, ml)))
+	http.HandleFunc("/v1/image", middleware.OnlyGet(api.ImageHandler(cache, internal.Sha256UrlHasher)))
+	http.HandleFunc("/v1/cache", middleware.OnlyPost(api.ImageCacheHandler(cache, internal.Sha256UrlHasher, internal.DownloadImg)))
+	http.HandleFunc("/health", middleware.OnlyGet(api.HealthHandler(ml)))
+	http.HandleFunc("/dashboard", middleware.OnlyGet(api.DashboardHandler(cache, ml)))
 	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
-		err := http.ListenAndServe(conf.Host()+":"+conf.Port(), nil)
+		err := http.ListenAndServe(net.JoinHostPort(conf.Host(), conf.HttpPort()), nil)
 		if err != nil {
 			log.Println(err.Error())
 		}

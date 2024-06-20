@@ -15,17 +15,23 @@ import (
 	"strings"
 )
 
-func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.HandlerFunc {
+const internalErrStr = "internal server error"
+
+// ImageHandler gets a cached image from the worker cluster
+func ImageHandler(cluster internal.Cluster, service *imageservice.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		prom.ImageHandlerHits.Inc()
 
 		imgUrl, err := url.QueryUnescape(r.URL.Query().Get("url"))
 		if err != nil {
-			imageError(w, "HandleImage QueryUnescape error:", err)
+			log.Println("ImageHandler (gateway) error un-escaping url:", err)
+			http.Error(w, internalErrStr, http.StatusBadRequest)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		if !strings.HasPrefix(imgUrl, "https") { // url encoded for https://
+			log.Println("ImageHandler (gateway) error url does not start with https")
 			http.Error(w, "invalid url: "+imgUrl, http.StatusBadRequest)
 			prom.ImageHandlerErrors.Inc()
 			return
@@ -33,7 +39,9 @@ func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.H
 
 		clusterLen := len(cluster.WorkerNodes())
 		if clusterLen == 0 {
-			imageError(w, "HandleImage cluster not available:", err)
+			log.Println("ImageHandler (gateway) error cluster not available")
+			http.Error(w, internalErrStr, http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
@@ -47,31 +55,33 @@ func HandleImage(cluster internal.Cluster, service *imageservice.Service) http.H
 		if errors.Is(err, imageservice.ErrNotFound) { // post image and update raw variable if not cached
 			img, err := service.CacheImage(workerUrl, imgUrl)
 			if err != nil {
-				imageError(w, "client responded with error", err)
+				log.Println("ImageHandler (gateway) error client responded with:", err)
+				http.Error(w, internalErrStr, http.StatusInternalServerError)
+				prom.ImageHandlerErrors.Inc()
 				return
 			}
 
 			if _, err := w.Write(img); err != nil {
-				imageError(w, "HandleImage error writing response", err)
+				log.Println("ImageHandler (gateway) error writing response:", err)
+				http.Error(w, internalErrStr, http.StatusInternalServerError)
+				prom.ImageHandlerErrors.Inc()
 				return
 			}
 
 		} else if err != nil {
-			imageError(w, "client responded with error", err)
+			log.Println("ImageHandler (gateway) error getting image:", err)
+			http.Error(w, internalErrStr, http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 
 		if _, err := w.Write(raw); err != nil {
-			imageError(w, "HandleImage error writing response", err)
+			log.Println("ImageHandler (gateway) error writing response:", err)
+			http.Error(w, internalErrStr, http.StatusInternalServerError)
+			prom.ImageHandlerErrors.Inc()
 			return
 		}
 	}
-}
-
-func imageError(w http.ResponseWriter, msg string, err error) {
-	log.Println(msg, err)
-	http.Error(w, "internal server error", http.StatusInternalServerError)
-	prom.ImageHandlerErrors.Inc()
 }
 
 // keep it simple for now
@@ -89,12 +99,13 @@ func idFromUrl(url string, mod int) int {
 	return int(result.Int64())
 }
 
-type response struct {
-	Nodes []string `json:"nodes"`
-	Score int      `json:"score"`
-}
+// HealthHandler outputs the health score of the cluster
+func HealthHandler(cluster internal.Cluster) http.HandlerFunc {
+	type response struct {
+		Nodes []string `json:"nodes"`
+		Score int      `json:"score"`
+	}
 
-func HandleHealth(cluster internal.Cluster) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var nodes []string
 		for _, node := range cluster.Nodes() {
@@ -108,20 +119,16 @@ func HandleHealth(cluster internal.Cluster) http.HandlerFunc {
 
 		jsn, err := json.Marshal(resp)
 		if err != nil {
-			healthError(w, "HealthHandler error marshalling json:", err)
+			log.Println("HealthHandler (gateway) error marshaling response:", err)
+			http.Error(w, internalErrStr, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if _, err := w.Write(jsn); err != nil {
-			healthError(w, "HealthHandler error writing response:", err)
+			log.Println("HealthHandler (gateway) error writing response:", err)
+			http.Error(w, internalErrStr, http.StatusInternalServerError)
 			return
 		}
 	}
-}
-
-func healthError(w http.ResponseWriter, msg string, err error) {
-	log.Println(msg, err)
-	http.Error(w, "internal server error", http.StatusInternalServerError)
-	prom.HealthHandlerErrors.Inc()
 }

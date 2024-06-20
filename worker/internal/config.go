@@ -8,18 +8,19 @@ import (
 )
 
 type AppConfig struct {
-	clusterSecret []byte
-	host          string
-	port          string
-	knownHosts    []string
-	name          string
+	secret     []byte
+	host       string
+	httpPort   string
+	knownHosts []string
+	name       string
 }
 
-func EnvConfig() (*AppConfig, error) {
+func ConfigFromEnv() (*AppConfig, error) {
 	conf := &AppConfig{}
 
-	conf.clusterSecret = []byte(os.Getenv("CLUSTER_SECRET"))
-	if conf.clusterSecret == nil || len(conf.clusterSecret) <= 0 {
+	if secret := os.Getenv("CLUSTER_SECRET"); secret != "" {
+		conf.secret = []byte(secret)
+	} else {
 		return nil, errors.New("env CLUSTER_SECRET is not set")
 	}
 
@@ -29,8 +30,8 @@ func EnvConfig() (*AppConfig, error) {
 	}
 	conf.host = ip
 
-	conf.port = os.Getenv("PORT")
-	if conf.port == "" {
+	conf.httpPort = os.Getenv("PORT")
+	if conf.httpPort == "" {
 		return nil, errors.New("env PORT is not set")
 	}
 
@@ -47,16 +48,16 @@ func EnvConfig() (*AppConfig, error) {
 	return conf, nil
 }
 
-func (c *AppConfig) ClusterSecret() []byte {
-	return c.clusterSecret
+func (c *AppConfig) Secret() []byte {
+	return c.secret
 }
 
 func (c *AppConfig) Host() string {
 	return c.host
 }
 
-func (c *AppConfig) Port() string {
-	return c.port
+func (c *AppConfig) HttpPort() string {
+	return c.httpPort
 }
 
 func (c *AppConfig) KnownHosts() []string {
