@@ -40,7 +40,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
-		err := http.ListenAndServe(conf.Host()+":"+conf.Port(), nil)
+		err := http.ListenAndServe(net.JoinHostPort(conf.Host(), conf.Port()), nil)
 		if err != nil {
 			log.Println(err.Error())
 		}
