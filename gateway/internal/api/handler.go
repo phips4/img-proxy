@@ -99,13 +99,13 @@ func idFromUrl(url string, mod int) int {
 	return int(result.Int64())
 }
 
-type response struct {
-	Nodes []string `json:"nodes"`
-	Score int      `json:"score"`
-}
-
 // HealthHandler outputs the health score of the cluster
 func HealthHandler(cluster internal.Cluster) http.HandlerFunc {
+	type response struct {
+		Nodes []string `json:"nodes"`
+		Score int      `json:"score"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var nodes []string
 		for _, node := range cluster.Nodes() {
