@@ -17,15 +17,15 @@ import (
 )
 
 func main() {
-	conf, err := internal.EnvConfig()
+	conf, err := internal.ConfigFromEnv()
 	if err != nil {
 		log.Fatalln("error parsing env", err.Error())
 		return
 	}
 
-	log.Printf("starting worker URL: %s:%s/ \n", conf.Host(), conf.Port())
+	log.Printf("starting worker URL: %s:%s/ \n", conf.Host(), conf.HttpPort())
 
-	ml, err := joinCluster(conf.Host(), conf.Name(), conf.ClusterSecret(), conf.KnownHosts())
+	ml, err := joinCluster(conf.Host(), conf.Name(), conf.Secret(), conf.KnownHosts())
 	if err != nil {
 		log.Fatalln("could not join cluster: ", err.Error())
 		return
@@ -40,7 +40,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(conf.Host(), conf.Port()), nil)
+		err := http.ListenAndServe(net.JoinHostPort(conf.Host(), conf.HttpPort()), nil)
 		if err != nil {
 			log.Println(err.Error())
 		}
