@@ -49,6 +49,14 @@ By default, it starts with only one gateway and worker node. To start the cluste
 
 Nodes are configured with environment variables, so take a look at the docker-compose.yml file.
 
+Now simply send a GET request to your application, containing the URL to the image to cache.
+
+with curl:
+`curl -G "http://172.18.0.9:8080/image" --data-urlencode "url=https://images.pexels.com/photos/26052406/pexels-photo-26052406/free-photo-of-tier-niedlich-suss-gras.jpeg"`
+
+or in your browser:
+[http://172.18.0.9:8080/image?url=...](http://172.18.0.9:8080/image?url=https://images.pexels.com/photos/26052406/pexels-photo-26052406/free-photo-of-tier-niedlich-suss-gras.jpeg)
+
 ## Results
 
 I use [Prometheus](https://prometheus.io/) to collect metrics from our software, demonstrating the disadvantages of

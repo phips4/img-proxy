@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   gateway:
     build:
@@ -14,6 +13,8 @@ services:
       HTTP_PORT: 8080
     depends_on:
       - worker
+    deploy:
+      replicas: 3
 
   worker:
     build:
@@ -25,6 +26,8 @@ services:
       CLUSTER_SECRET: "6ycQElx60By2aG66YqQoAmMemebZoQgEBTsph2KkdW8="
       PORT: "8080"
       KNOWN_HOSTS: "img-proxy-worker-1"
+    deploy:
+      replicas: 3
 
   prometheus:
     image: prom/prometheus
